@@ -209,3 +209,43 @@ by GitHub in UTC, and is counted on the UTC day.
   history is not downloaded to find one month
 - Activity is automatically deduplicated when using both methods
 - Use `--verbose` to see per-repository progress
+
+## Interface web locale
+
+Une landing page en français permet de préparer les paramètres, copier la commande
+équivalente, lancer l’analyse et télécharger le rapport en **CSV** et **PDF**.
+Le script CLI existant reste utilisable directement.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+gh auth login
+python3 server.py
+```
+
+Ouvrez ensuite **http://127.0.0.1:8000**. Pour choisir un autre port :
+`python3 server.py --port 8080`.
+
+Le formulaire expose l’organisation, l’utilisateur, le mois, la méthode,
+le nombre de dépôts récents, les dépôts à inclure et le mode détaillé.
+L’analyse utilise la session GitHub CLI du serveur ; aucun token n’est demandé
+par la page. Une seule analyse s’exécute à la fois. Les rapports restent en mémoire
+et expirent après 24 heures (nettoyage au lancement d’une nouvelle analyse),
+ou au redémarrage du serveur. Les rapports incomplets restent téléchargeables :
+les échecs figurent dans la page et dans les deux exports. Le CSV contient une ligne
+par activité, avec l’organisation, l’utilisateur, la période et le statut du rapport.
+Le PDF contient la synthèse et le détail quotidien, sur plusieurs pages si nécessaire.
+
+Cette interface est conçue pour un usage **local** et écoute uniquement sur
+`127.0.0.1`. Un déploiement partagé nécessiterait une authentification des utilisateurs,
+une gestion distincte de leurs accès GitHub et un stockage des tâches.
+Les polices Google Fonts sont facultatives ; des polices système prennent le relais
+sans connexion réseau.
+
+Vérifications du serveur et des exports (avec `pypdf` installé en plus pour les tests PDF) :
+
+```bash
+pip install pypdf
+python3 -m unittest discover -s tests -v
+```
