@@ -22,3 +22,5 @@ debug_match.py
 # OS
 .DS_Store
 Thumbs.db
+# Local web environment
+.venv/
