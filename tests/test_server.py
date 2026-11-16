@@ -1,6 +1,9 @@
 import csv
 import io
 import json
+import pathlib
+import shutil
+import tempfile
 import threading
 import unittest
 from unittest.mock import patch
@@ -58,6 +61,12 @@ class ReportsTest(unittest.TestCase):
         del server.JOBS['test']
 
     def test_http_flow(self):
+        web_root = tempfile.mkdtemp()
+        (pathlib.Path(web_root) / 'index.html').write_text('<title>Votre travail</title>', encoding='utf-8')
+        self.addCleanup(shutil.rmtree, web_root)
+        patcher = patch.object(server, 'WEB_ROOT', pathlib.Path(web_root))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         http = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
         thread = threading.Thread(target=http.serve_forever, daemon=True)
         thread.start()

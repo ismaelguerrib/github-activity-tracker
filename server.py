@@ -4,6 +4,7 @@ import argparse
 import csv
 import io
 import json
+import mimetypes
 import re
 import secrets
 import shlex
@@ -18,6 +19,7 @@ from xml.sax.saxutils import escape
 from extract_activity_gh import GitHubCLIActivityTracker
 
 ROOT = Path(__file__).resolve().parent
+WEB_ROOT = ROOT / 'frontend' / 'dist' / 'frontend' / 'browser'
 JOBS = {}
 LOCK = threading.Lock()
 
@@ -143,12 +145,21 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def serve_static(self, path):
+        # Serve the built Angular app; unknown non-API paths fall back to index.html (SPA).
+        target = (WEB_ROOT / (path.lstrip('/') or 'index.html')).resolve()
+        if (target == WEB_ROOT or WEB_ROOT in target.parents) and target.is_file():
+            ctype = mimetypes.guess_type(target.name)[0] or 'application/octet-stream'
+            if ctype.startswith('text/') or ctype in ('application/javascript', 'application/json'):
+                ctype += '; charset=utf-8'
+            return self.respond(200, target.read_bytes(), ctype)
+        index = WEB_ROOT / 'index.html'
+        if index.is_file():
+            return self.respond(200, index.read_bytes(), 'text/html; charset=utf-8')
+        return self.respond(503, {'error': 'Frontend non compilé. Exécutez : npm --prefix frontend ci && npm --prefix frontend run build.'})
+
     def do_GET(self):
         path = urlparse(self.path).path
-        assets = {'/': ('index.html', 'text/html; charset=utf-8'), '/style.css': ('style.css', 'text/css'), '/app.js': ('app.js', 'text/javascript')}
-        if path in assets:
-            name, kind = assets[path]
-            return self.respond(200, (ROOT / 'web' / name).read_bytes(), kind)
         match = re.fullmatch(r'/api/reports/([a-f0-9]{32})(?:\.(csv|pdf))?', path)
         if match:
             with LOCK:
@@ -167,7 +178,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, body, 'text/csv; charset=utf-8' if fmt == 'csv' else 'application/pdf', filename)
             except ImportError:
                 return self.respond(503, {'error': 'Export PDF indisponible. Installez requirements.txt.'})
-        self.respond(404, {'error': 'Page introuvable.'})
+        if path.startswith('/api/'):
+            return self.respond(404, {'error': 'Route introuvable.'})
+        self.serve_static(path)
 
     def do_POST(self):
         # Only same-origin JSON requests may trigger the authenticated local CLI.

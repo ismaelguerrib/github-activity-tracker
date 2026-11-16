@@ -2,60 +2,93 @@
 
 A Python tool to extract activity days for a specific GitHub user within an organization for a given month.
 
-## Lancer le site en local avec la landing page
+## Le site local (front Angular + API Python)
 
-Une landing page en français permet de préparer les paramètres, copier la commande
-équivalente, lancer l’analyse et télécharger le rapport en **CSV** et **PDF**.
-Le script CLI existant reste utilisable directement.
+Le front est une **application Angular** (dernière version, SCSS) dans
+[`frontend/`](frontend/). La landing page explique le concept et le fonctionnement,
+puis un formulaire prépare les paramètres, affiche la commande équivalente, lance
+l’analyse et, une fois la réponse obtenue, montre le **nombre de jours actifs** et
+le **nombre de contributions**, avec téléchargement du rapport en **CSV** et **PDF**.
+Le serveur Python ([`server.py`](server.py)) sert l’app Angular compilée et expose
+l’API ; la logique d’analyse ([`extract_activity_gh.py`](extract_activity_gh.py))
+est inchangée et reste utilisable en CLI.
 
-### Premier lancement (macOS / Linux)
+## How to test (pas à pas)
 
-Prérequis : **Python 3** et **GitHub CLI** (`gh`) installés.
-Depuis le dossier du projet :
+Prérequis : **Python 3**, **Node.js 20+** (pour `npm`) et **GitHub CLI** (`gh`).
+
+### 1. Préparer le backend Python
 
 ```bash
-cd github-activity-tracker  # si vous êtes dans le dossier parent
+cd github-activity-tracker          # si vous êtes dans le dossier parent
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
-
-# Pour lancer des analyses, connectez GitHub CLI si nécessaire :
-gh auth status
-gh auth login
-
-# Démarrer le site et son API locale :
-python3 server.py
 ```
 
-Ouvrez la landing page : **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
-Le bouton **Générer mon rapport** mène au formulaire sur la même page
-([accès direct](http://127.0.0.1:8000/#generator)).
-La page peut être consultée sans connexion GitHub ; celle-ci est nécessaire
-pour lancer une analyse.
-
-Utilisez `server.py` pour servir la landing page et les routes API nécessaires
-au formulaire. Ouvrir directement `web/index.html` ou utiliser un simple
-serveur de fichiers statiques ne permet pas de générer les rapports.
-
-### Lancements suivants
+### 2. Compiler le front Angular
 
 ```bash
-# Depuis le dossier du projet :
+npm --prefix frontend ci            # installe les dépendances (une seule fois)
+npm --prefix frontend run build     # génère frontend/dist/frontend/browser/
+```
+
+### 3. Connecter GitHub CLI (pour lancer de vraies analyses)
+
+```bash
+gh auth status                      # vérifier
+gh auth login                       # si nécessaire
+```
+
+### 4. Démarrer le site
+
+```bash
+python3 server.py                   # écoute sur http://127.0.0.1:8000
+```
+
+Ouvrez **[http://127.0.0.1:8000](http://127.0.0.1:8000)**. `server.py` sert l’app
+Angular compilée **et** l’API : ouvrir les fichiers de `frontend/dist` directement,
+ou via un simple serveur statique, ne permet pas de générer les rapports.
+Si le port 8000 est pris : `python3 server.py --port 8080` puis
+**[http://127.0.0.1:8080](http://127.0.0.1:8080)**.
+
+### 5. Tester le parcours complet
+
+1. Sur la landing page, cliquez **Générer mon rapport**.
+2. Saisissez une **organisation** et un **utilisateur** GitHub, choisissez le **mois**.
+3. Cliquez **Générer le rapport**. La page interroge l’API et affiche un indicateur
+   d’analyse (plusieurs minutes possibles selon le nombre de dépôts).
+4. À la réponse, le panneau affiche le **nombre de jours actifs**, le **nombre de
+   contributions** et le détail au jour le jour.
+5. Téléchargez le rapport via **Télécharger CSV** et **Télécharger PDF**.
+
+> Rappel : la page se consulte sans connexion GitHub, mais une analyse exige `gh`
+> connecté. Si `gh` est indisponible, l’erreur s’affiche directement dans le panneau.
+
+### 6. Lancer les tests automatisés
+
+```bash
+# Tests Python (serveur + exports). pypdf est requis pour le test PDF.
 source .venv/bin/activate
-python3 server.py
+python3 -m pip install pypdf
+python3 -m unittest discover -s tests -v
+
+# Tests Angular (composant + service)
+npm --prefix frontend test -- --watch=false
 ```
 
-Gardez le terminal ouvert pendant l’utilisation du site. Pour arrêter le serveur,
-appuyez sur **Ctrl+C**. Les modifications de la landing page dans `web/` sont
-visibles après actualisation du navigateur.
+### Développer le front en direct (optionnel)
 
-Si le port 8000 est déjà utilisé, choisissez-en un autre :
+Pour le rechargement à chaud pendant le développement du front, gardez
+`python3 server.py` lancé (API) et, dans un second terminal :
 
 ```bash
-python3 server.py --port 8080
+npm --prefix frontend start         # ng serve sur http://localhost:4200
 ```
 
-Ouvrez alors **[http://127.0.0.1:8080](http://127.0.0.1:8080)**.
+Le serveur de dev Angular proxifie `/api` vers `http://127.0.0.1:8000`
+(voir [`frontend/proxy.conf.json`](frontend/proxy.conf.json)). Ouvrez alors
+**[http://localhost:4200](http://localhost:4200)**.
 
 ### Fonctionnement de l’interface
 
@@ -74,13 +107,6 @@ Cette interface est conçue pour un usage **local** et écoute uniquement sur
 une gestion distincte de leurs accès GitHub et un stockage des tâches.
 Les polices Google Fonts sont facultatives ; des polices système prennent le relais
 sans connexion réseau.
-
-Vérifications du serveur et des exports (avec `pypdf` installé en plus pour les tests PDF) :
-
-```bash
-pip install pypdf
-python3 -m unittest discover -s tests -v
-```
 
 ## Features
 

@@ -15,7 +15,8 @@ ENV/
 *.swo
 
 # Project specific
-*.json
+/*.json
+activity_report.json
 debug_test.py
 debug_match.py
 
