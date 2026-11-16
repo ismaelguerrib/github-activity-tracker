@@ -13,7 +13,7 @@ Le serveur Python ([`server.py`](server.py)) sert l’app Angular compilée et e
 l’API ; la logique d’analyse ([`extract_activity_gh.py`](extract_activity_gh.py))
 est inchangée et reste utilisable en CLI.
 
-## How to test (pas à pas)
+## How to launch (pas à pas)
 
 Prérequis : **Python 3**, **Node.js 20+** (pour `npm`) et **GitHub CLI** (`gh`).
 
@@ -107,6 +107,53 @@ Cette interface est conçue pour un usage **local** et écoute uniquement sur
 une gestion distincte de leurs accès GitHub et un stockage des tâches.
 Les polices Google Fonts sont facultatives ; des polices système prennent le relais
 sans connexion réseau.
+
+## Les commandes Python
+
+Le projet contient deux points d'entrée Python. Tous deux s'appuient sur votre
+session **GitHub CLI** (`gh`) pour l'authentification : aucun token n'est stocké
+ni demandé.
+
+### `server.py` — le serveur web local
+
+```bash
+python3 server.py            # http://127.0.0.1:8000
+python3 server.py --port 8080
+```
+
+Sert l'application Angular compilée (`frontend/dist/frontend/browser/`) **et**
+l'API utilisée par le formulaire. Il faut donc avoir lancé `npm --prefix frontend
+run build` au moins une fois ; sinon le serveur répond par une erreur explicite
+invitant à compiler le front. Écoute uniquement sur `127.0.0.1`, exécute une
+analyse à la fois, et garde les rapports en mémoire (expiration après 24 h ou au
+redémarrage). Seul argument : `--port` (défaut `8000`).
+
+L'API exposée :
+
+| Route | Rôle |
+| --- | --- |
+| `POST /api/reports` | Lance une analyse ; renvoie un identifiant de tâche. |
+| `GET /api/reports/<id>` | État de la tâche (`running` / `done` / `error`) et rapport. |
+| `GET /api/reports/<id>.csv` | Télécharge le rapport en CSV. |
+| `GET /api/reports/<id>.pdf` | Télécharge le rapport en PDF. |
+
+### `extract_activity_gh.py` — l'outil en ligne de commande
+
+Le même moteur d'analyse, utilisable seul, sans le serveur ni le front :
+
+```bash
+# Analyse du mois dernier (valeurs par défaut)
+python3 extract_activity_gh.py --org nom-org --user utilisateur
+
+# Mois précis + sauvegarde JSON
+python3 extract_activity_gh.py --org nom-org --user utilisateur \
+    --year 2024 --month 12 --output activity_report.json
+```
+
+Il affiche le nombre de jours actifs et le détail quotidien dans le terminal.
+Le détail de chaque argument (`--method`, `--repo-limit`, `--include-repos`,
+`--verbose`…) est documenté dans [Usage](#usage) et
+[Command Line Arguments](#command-line-arguments) ci-dessous.
 
 ## Features
 

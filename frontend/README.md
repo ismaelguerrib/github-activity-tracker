@@ -1,59 +1,50 @@
-# Frontend
+# Frontend — GitHub Activity Tracker
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.7.
+Application **Angular** (SCSS) qui sert de landing page et de formulaire pour
+l'outil d'analyse d'activité GitHub. Elle appelle l'API locale exposée par
+[`server.py`](../server.py) (racine du dépôt) ; elle n'a pas de backend propre.
 
-## Development server
+- Landing page : explique le concept et le fonctionnement.
+- Formulaire : organisation, utilisateur, mois, méthode, options avancées.
+- Résultat : nombre de **jours actifs**, nombre de **contributions**, détail
+  au jour le jour, et export **CSV** / **PDF**.
 
-To start a local development server, run:
+Généré avec Angular CLI. Composant racine : [`src/app/app.ts`](src/app/app.ts) ·
+appels API : [`src/app/report.service.ts`](src/app/report.service.ts).
 
-```bash
-ng serve
-```
+## Prérequis
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- **Node.js 20+** (fournit `npm`)
+- Le backend Python lancé à côté (voir le [README racine](../README.md)) —
+  sans lui, le formulaire ne peut pas générer de rapport.
 
 ```bash
-ng generate --help
+npm ci        # installe les dépendances (une seule fois)
 ```
 
-## Building
+## Développement (rechargement à chaud)
 
-To build the project run:
+Lancez d'abord l'API Python (`python3 server.py` à la racine), puis :
 
 ```bash
-ng build
+npm start     # ng serve sur http://localhost:4200
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Le serveur de dev proxifie `/api` vers `http://127.0.0.1:8000`
+(voir [`proxy.conf.json`](proxy.conf.json)), donc les appels API fonctionnent
+sans configuration supplémentaire.
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Build de production
 
 ```bash
-ng test
+npm run build # génère dist/frontend/browser/
 ```
 
-## Running end-to-end tests
+C'est ce dossier que [`server.py`](../server.py) sert directement : après un
+build, `python3 server.py` expose l'app **et** l'API sur le même port (8000).
 
-For end-to-end (e2e) testing, run:
+## Tests
 
 ```bash
-ng e2e
+npm test -- --watch=false   # tests unitaires (Vitest)
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
