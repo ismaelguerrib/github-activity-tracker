@@ -2,6 +2,86 @@
 
 A Python tool to extract activity days for a specific GitHub user within an organization for a given month.
 
+## Lancer le site en local avec la landing page
+
+Une landing page en français permet de préparer les paramètres, copier la commande
+équivalente, lancer l’analyse et télécharger le rapport en **CSV** et **PDF**.
+Le script CLI existant reste utilisable directement.
+
+### Premier lancement (macOS / Linux)
+
+Prérequis : **Python 3** et **GitHub CLI** (`gh`) installés.
+Depuis le dossier du projet :
+
+```bash
+cd github-activity-tracker  # si vous êtes dans le dossier parent
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+
+# Pour lancer des analyses, connectez GitHub CLI si nécessaire :
+gh auth status
+gh auth login
+
+# Démarrer le site et son API locale :
+python3 server.py
+```
+
+Ouvrez la landing page : **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
+Le bouton **Générer mon rapport** mène au formulaire sur la même page
+([accès direct](http://127.0.0.1:8000/#generator)).
+La page peut être consultée sans connexion GitHub ; celle-ci est nécessaire
+pour lancer une analyse.
+
+Utilisez `server.py` pour servir la landing page et les routes API nécessaires
+au formulaire. Ouvrir directement `web/index.html` ou utiliser un simple
+serveur de fichiers statiques ne permet pas de générer les rapports.
+
+### Lancements suivants
+
+```bash
+# Depuis le dossier du projet :
+source .venv/bin/activate
+python3 server.py
+```
+
+Gardez le terminal ouvert pendant l’utilisation du site. Pour arrêter le serveur,
+appuyez sur **Ctrl+C**. Les modifications de la landing page dans `web/` sont
+visibles après actualisation du navigateur.
+
+Si le port 8000 est déjà utilisé, choisissez-en un autre :
+
+```bash
+python3 server.py --port 8080
+```
+
+Ouvrez alors **[http://127.0.0.1:8080](http://127.0.0.1:8080)**.
+
+### Fonctionnement de l’interface
+
+Le formulaire expose l’organisation, l’utilisateur, le mois, la méthode,
+le nombre de dépôts récents, les dépôts à inclure et le mode détaillé.
+L’analyse utilise la session GitHub CLI du serveur ; aucun token n’est demandé
+par la page. Une seule analyse s’exécute à la fois. Les rapports restent en mémoire
+et expirent après 24 heures (nettoyage au lancement d’une nouvelle analyse),
+ou au redémarrage du serveur. Les rapports incomplets restent téléchargeables :
+les échecs figurent dans la page et dans les deux exports. Le CSV contient une ligne
+par activité, avec l’organisation, l’utilisateur, la période et le statut du rapport.
+Le PDF contient la synthèse et le détail quotidien, sur plusieurs pages si nécessaire.
+
+Cette interface est conçue pour un usage **local** et écoute uniquement sur
+`127.0.0.1`. Un déploiement partagé nécessiterait une authentification des utilisateurs,
+une gestion distincte de leurs accès GitHub et un stockage des tâches.
+Les polices Google Fonts sont facultatives ; des polices système prennent le relais
+sans connexion réseau.
+
+Vérifications du serveur et des exports (avec `pypdf` installé en plus pour les tests PDF) :
+
+```bash
+pip install pypdf
+python3 -m unittest discover -s tests -v
+```
+
 ## Features
 
 - **Dual Strategy**: Combines repository-by-repository checking with the GitHub search API
@@ -15,7 +95,7 @@ A Python tool to extract activity days for a specific GitHub user within an orga
 ## Installation
 
 ```bash
-# No additional dependencies needed beyond Python 3 and GitHub CLI
+# CLI only: no additional dependencies beyond Python 3 and GitHub CLI
 # Check if gh is installed and authenticated:
 gh auth status
 
@@ -209,43 +289,3 @@ by GitHub in UTC, and is counted on the UTC day.
   history is not downloaded to find one month
 - Activity is automatically deduplicated when using both methods
 - Use `--verbose` to see per-repository progress
-
-## Interface web locale
-
-Une landing page en français permet de préparer les paramètres, copier la commande
-équivalente, lancer l’analyse et télécharger le rapport en **CSV** et **PDF**.
-Le script CLI existant reste utilisable directement.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-gh auth login
-python3 server.py
-```
-
-Ouvrez ensuite **http://127.0.0.1:8000**. Pour choisir un autre port :
-`python3 server.py --port 8080`.
-
-Le formulaire expose l’organisation, l’utilisateur, le mois, la méthode,
-le nombre de dépôts récents, les dépôts à inclure et le mode détaillé.
-L’analyse utilise la session GitHub CLI du serveur ; aucun token n’est demandé
-par la page. Une seule analyse s’exécute à la fois. Les rapports restent en mémoire
-et expirent après 24 heures (nettoyage au lancement d’une nouvelle analyse),
-ou au redémarrage du serveur. Les rapports incomplets restent téléchargeables :
-les échecs figurent dans la page et dans les deux exports. Le CSV contient une ligne
-par activité, avec l’organisation, l’utilisateur, la période et le statut du rapport.
-Le PDF contient la synthèse et le détail quotidien, sur plusieurs pages si nécessaire.
-
-Cette interface est conçue pour un usage **local** et écoute uniquement sur
-`127.0.0.1`. Un déploiement partagé nécessiterait une authentification des utilisateurs,
-une gestion distincte de leurs accès GitHub et un stockage des tâches.
-Les polices Google Fonts sont facultatives ; des polices système prennent le relais
-sans connexion réseau.
-
-Vérifications du serveur et des exports (avec `pypdf` installé en plus pour les tests PDF) :
-
-```bash
-pip install pypdf
-python3 -m unittest discover -s tests -v
-```
